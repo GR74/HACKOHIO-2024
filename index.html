@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geolocation Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 100px;
+        }
+        #location, #existing-coordinates {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Geolocation Test</h1>
+    <button onclick="getLocation()">Get My Location</button>
+    <div id="location"></div>
+    <div id="existing-coordinates"></div>
+
+    <script>
+        // Store existing coordinates in a matrix and user's location
+        let existingCoordinates = [];
+        let userLatitude = null;
+        let userLongitude = null;
+
+        // Fetch and display existing coordinates on page load
+        window.onload = function() {
+            fetch('http://127.0.0.1:5000/existing-coordinates')
+                .then(response => response.json())
+                .then(data => {
+                    existingCoordinates = data.map(coord => [coord[0], coord[1]]); // Create a 2D array
+                    const existingDiv = document.getElementById('existing-coordinates');
+                    existingDiv.innerHTML = '<h2>Existing Coordinates:</h2>';
+                    existingCoordinates.forEach(coord => {
+                        existingDiv.innerHTML += `Latitude: ${coord[0]}, Longitude: ${coord[1]}<br>`;
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching existing coordinates:', error);
+                });
+        };
+
+        function getLocation() {
+            const locationDiv = document.getElementById('location');
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userLatitude = position.coords.latitude;
+                        userLongitude = position.coords.longitude;
+                        locationDiv.innerHTML = `Latitude: ${userLatitude}, Longitude: ${userLongitude}`;
+                        console.log(`Your location: ${userLatitude}, ${userLongitude}`);
+
+                        // Check if the user's location matches existing coordinates
+                        const matches = existingCoordinates.some(coord => 
+                            Math.round(coord[0] * 1000) / 1000 === Math.round(userLatitude * 1000) / 1000 &&
+                            Math.round(coord[1] * 1000) / 1000 === Math.round(userLongitude * 1000) / 1000
+                        );
+
+                        if (matches) {
+                            locationDiv.innerHTML += '<br>Location matches an existing entry.';
+                        } else {
+                            locationDiv.innerHTML += '<br>No matching location found.';
+                        }
+                    },
+                    (error) => {
+                        locationDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+                        console.error(`Error: ${error.message}`);
+                    }
+                );
+            } else {
+                locationDiv.innerHTML = `<span class="error">Geolocation is not supported by this browser.</span>`;
+                console.error("Geolocation is not supported by this browser.");
+            }
+        }
+    </script>
+</body>
+</html>
