@@ -3,89 +3,348 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geolocation Test</title>
+    <title>Resource Finder App with Camera Access</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            text-align: center;
-            margin-top: 100px;
+            background-color: #ffffff;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        #location, #existing-coordinates {
-            margin-top: 20px;
+        nav {
+            background-color: #0096D6; /* Main color */
+            padding: 15px;
+            text-align: center;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        nav a {
+            margin: 0 15px;
+            color: white;
+            text-decoration: none;
             font-weight: bold;
         }
-        .error {
-            color: red;
+        .logo {
+            height: 60px; /* Adjust the height as needed */
+        }
+        .container {
+            padding: 20px;
+            text-align: center;
+            max-width: 1200px;
+            margin: 20px auto;
+        }
+        .section {
+            background-color: #0096D6; /* Main color */
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
         button {
-            padding: 10px 20px;
-            font-size: 16px;
+            padding: 10px 15px;
+            background-color: #0096D6; /* Main color */
+            color: white;
+            border: none;
+            border-radius: 5px;
             cursor: pointer;
+        }
+        button:hover {
+            background-color: #007bb3; /* Darker shade for hover effect */
+        }
+        .result-card {
+            background-color: #fff;
+            color: #000;
+            border-radius: 5px;
+            margin: 10px;
+            padding: 15px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .result-card h3 {
+            margin-top: 0;
+        }
+        .hide {
+            display: none;
+        }
+
+        /* Style for the video stream */
+        #videoStream {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            margin-top: 20px;
+            border: 2px solid #0096D6;
+            border-radius: 10px;
         }
     </style>
 </head>
 <body>
-    <h1>Geolocation Test</h1>
-    <button onclick="getLocation()">Get My Location</button>
-    <div id="location"></div>
-    <div id="existing-coordinates"></div>
 
-    <script>
-        // Store existing coordinates in a matrix and user's location
-        let existingCoordinates = [];
-        let userLatitude = null;
-        let userLongitude = null;
+<!-- Navbar with Logo -->
+<nav>
+    <div>
+        <img src="BridgeLogo.png" alt="Bridge Logo" class="logo">
+    </div>
+    <div>
+        <a href="#home">Home</a>
+        <a href="#user">User</a>
+        <a href="#ngo">NGO Dashboard</a>
+    </div>
+</nav>
 
-        // Fetch and display existing coordinates on page load
-        window.onload = function() {
-            fetch('http://127.0.0.1:5000/existing-coordinates')
-                .then(response => response.json())
-                .then(data => {
-                    existingCoordinates = data.map(coord => [coord[0], coord[1]]); // Create a 2D array
-                    const existingDiv = document.getElementById('existing-coordinates');
-                    existingDiv.innerHTML = '<h2>Existing Coordinates:</h2>';
-                    existingCoordinates.forEach(coord => {
-                        existingDiv.innerHTML += `Latitude: ${coord[0]}, Longitude: ${coord[1]}<br>`;
-                    });
-                })
-                .catch(error => {
-                    console.error('Error fetching existing coordinates:', error);
-                });
-        };
+<!-- Home Section -->
+<div class="container" id="home">
+    <div class="section">
+        <h1>Welcome to the Resource Finder App</h1>
+        <p>Search for food, hygiene products, and medical supplies in your area or manage NGO inventory.</p>
+        
+        <!-- Allow Location Button -->
+        <button onclick="getCurrentLocation()">Allow Location</button>
+        <p id="locationStatus"></p> <!-- Status of location access -->
+    </div>
+</div>
 
-        function getLocation() {
-            const locationDiv = document.getElementById('location');
+<!-- User Section: Display Closest Food Banks -->
+<div class="container" id="user">
+    <div class="section">
+        <h2>Closest Food Banks</h2>
 
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        userLatitude = position.coords.latitude;
-                        userLongitude = position.coords.longitude;
-                        locationDiv.innerHTML = `Latitude: ${userLatitude}, Longitude: ${userLongitude}`;
-                        console.log(`Your location: ${userLatitude}, ${userLongitude}`);
+        <div id="foodBanksResults">
+            <!-- Food banks will be listed here with distances -->
+        </div>
+    </div>
+</div>
 
-                        // Check if the user's location matches existing coordinates
-                        const matches = existingCoordinates.some(coord => 
-                            Math.round(coord[0] * 1000) / 1000 === Math.round(userLatitude * 1000) / 1000 &&
-                            Math.round(coord[1] * 1000) / 1000 === Math.round(userLongitude * 1000) / 1000
-                        );
+<!-- NGO Dashboard Section -->
+<div class="container" id="ngo">
+    <div class="section">
+        <h2>Are you an NGO?</h2>
+        <p>Select "Verify NGO" to proceed with managing inventory for your NGO.</p>
+        <button onclick="showVerifyNGO()">Verify NGO</button>
 
-                        if (matches) {
-                            locationDiv.innerHTML += '<br>Location matches an existing entry.';
-                        } else {
-                            locationDiv.innerHTML += '<br>No matching location found.';
-                        }
-                    },
-                    (error) => {
-                        locationDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
-                        console.error(`Error: ${error.message}`);
-                    }
-                );
-            } else {
-                locationDiv.innerHTML = `<span class="error">Geolocation is not supported by this browser.</span>`;
-                console.error("Geolocation is not supported by this browser.");
-            }
+        <!-- Verification Section -->
+        <div class="hide" id="verifyNGOSection">
+            <h3>Verify Your NGO</h3>
+            <input type="text" id="verifyNGOName" placeholder="Enter NGO Name...">
+            <button onclick="verifyNGO()">Submit</button>
+        </div>
+
+        <!-- Add NGO Section (Only appears if NGO not found) -->
+        <div class="hide" id="addNGOSection">
+            <h3>Add NGO</h3>
+            <input type="text" id="addNGOName" placeholder="Enter New NGO Name...">
+            <button onclick="addNGO()">Add NGO</button>
+        </div>
+
+        <!-- Manage Inventory Button (Hidden until verification or adding NGO) -->
+        <button class="hide" id="manageInventoryButton" onclick="showInventory()">Manage Inventory</button>
+    </div>
+
+    <!-- Inventory Section -->
+    <div class="section hide" id="inventorySection">
+        <h3>Inventory Management</h3>
+        <button onclick="showUpload()">Upload Inventory (CSV/Excel)</button>
+        <button onclick="detectWithVision()">Detect Products Using Camera</button>
+        <button onclick="deleteInventory()">Delete Inventory</button>
+
+        <div class="hide" id="uploadSection">
+            <input type="file" id="ngoFileInput" class="file-upload">
+            <button onclick="uploadInventory()">Upload</button>
+        </div>
+
+        <div id="inventoryResult"></div>
+
+        <!-- Video Stream for Camera Access -->
+        <video id="videoStream" class="hide" autoplay></video> <!-- Hidden by default -->
+    </div>
+</div>
+
+<script>
+    // List of food banks with latitude and longitude
+    const foodBanks = [
+        { name: "Playa Bowls", address: "1952 N High St", lat: 40.0026, lng: -83.0085 },
+        { name: "Buckeye Food Alliance", address: "30 W Woodruff Ave", lat: 40.0040, lng: -83.0082 },
+        { name: "Neighborhood Services Inc.", address: "1950 N 4th St Suite J/K", lat: 40.0063, lng: -82.9962 },
+        { name: "Nnemap Food Pantry", address: "677 E 11th Ave", lat: 39.9921, lng: -82.9862 },
+        { name: "Clintonville Beechwold CRC Food", address: "14 W Lakeview Ave", lat: 40.0221, lng: -83.0153 },
+        { name: "Clintonville Beechwold CRC East", address: "3222 N High St", lat: 40.0363, lng: -83.0158 },
+        { name: "St. Stephen's Community House", address: "1500 E 17th Ave", lat: 40.0007, lng: -82.9749 },
+        { name: "St. Stephen's Community House - Food Distribution", address: "1500 E 17th Ave", lat: 40.0007, lng: -82.9749 },
+        { name: "Columbus Urban League", address: "788 Mt Vernon Ave", lat: 39.9705, lng: -82.9807 },
+        { name: "Communities In Schools - Columbus - Food Distribution", address: "510 E N Broadway St", lat: 40.0252, lng: -83.0054 }
+    ];
+
+    // Function to get the user's current location
+    function getCurrentLocation() {
+        const status = document.getElementById("locationStatus");
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(showPosition, showError);
+            status.innerHTML = "Getting location...";
+        } else {
+            status.innerHTML = "Geolocation is not supported by this browser.";
         }
-    </script>
+    }
+
+    // Function to calculate the distance between two lat/lng coordinates using the Haversine formula
+    function calculateDistance(lat1, lng1, lat2, lng2) {
+        const R = 6371; // Radius of the Earth in kilometers
+        const dLat = degreesToRadians(lat2 - lat1);
+        const dLng = degreesToRadians(lng2 - lng1);
+        const a = 
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(degreesToRadians(lat1)) * Math.cos(degreesToRadians(lat2)) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = R * c; // Distance in kilometers
+        return distance * 0.621371; // Convert to miles
+    }
+
+    // Convert degrees to radians
+    function degreesToRadians(degrees) {
+        return degrees * (Math.PI / 180);
+    }
+
+    // Function to display the 4 closest food banks
+    function displayClosestFoodBanks(lat, lng) {
+        const foodBanksWithDistances = foodBanks.map(foodBank => {
+            const distance = calculateDistance(lat, lng, foodBank.lat, foodBank.lng);
+            return { ...foodBank, distance };
+        });
+
+        // Sort by distance and take the 4 closest
+        const closestFoodBanks = foodBanksWithDistances.sort((a, b) => a.distance - b.distance).slice(0, 4);
+
+        // Display results
+        const foodBanksResults = document.getElementById("foodBanksResults");
+        foodBanksResults.innerHTML = ""; // Clear previous results
+
+        closestFoodBanks.forEach((foodBank, index) => {
+            const card = document.createElement("div");
+            card.className = "result-card";
+            card.innerHTML = `<h3>${index + 1}. ${foodBank.name}</h3><p>Address: ${foodBank.address}</p><p>Distance: ${foodBank.distance.toFixed(2)} miles</p>`;
+            foodBanksResults.appendChild(card);
+        });
+    }
+
+    // Show the user's position and calculate distances to food banks
+    function showPosition(position) {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        document.getElementById("locationStatus").innerHTML = `Latitude: ${lat} <br>Longitude: ${lng}`;
+        displayClosestFoodBanks(lat, lng); // Update with current location
+    }
+
+    // Handle errors if location permission is denied or not available
+    function showError(error) {
+        const status = document.getElementById("locationStatus");
+        switch(error.code) {
+            case error.PERMISSION_DENIED:
+                status.innerHTML = "User denied the request for Geolocation.";
+                break;
+            case error.POSITION_UNAVAILABLE:
+                status.innerHTML = "Location information is unavailable.";
+                break;
+            case error.TIMEOUT:
+                status.innerHTML = "The request to get user location timed out.";
+                break;
+            case error.UNKNOWN_ERROR:
+                status.innerHTML = "An unknown error occurred.";
+                break;
+        }
+    }
+
+    // NGO Section Functions
+    function showVerifyNGO() {
+        document.getElementById("verifyNGOSection").classList.remove("hide");
+    }
+
+    function verifyNGO() {
+        const ngoName = document.getElementById("verifyNGOName").value.trim();
+        if (ngoName === "") {
+            alert("Please enter the NGO name.");
+            return;
+        }
+
+        const existingNGO = ngoDatabase.find(ngo => ngo.name.toLowerCase() === ngoName.toLowerCase());
+        if (existingNGO) {
+            alert(`NGO ${ngoName} has been verified!`);
+            document.getElementById("verifyNGOSection").classList.add("hide");
+            document.getElementById("manageInventoryButton").classList.remove("hide");
+        } else {
+            alert(`NGO not found. Please add it.`);
+            document.getElementById("verifyNGOSection").classList.add("hide");
+            document.getElementById("addNGOSection").classList.remove("hide");
+        }
+    }
+
+    function addNGO() {
+        const ngoName = document.getElementById("addNGOName").value.trim();
+        if (ngoName === "") {
+            alert("Please enter the NGO name.");
+            return;
+        }
+
+        ngoDatabase.push({ name: ngoName });
+        alert(`NGO ${ngoName} has been added!`);
+
+        document.getElementById("addNGOSection").classList.add("hide");
+        document.getElementById("manageInventoryButton").classList.remove("hide");
+    }
+
+    function showInventory() {
+        document.getElementById("inventorySection").classList.remove("hide");
+    }
+
+    function showUpload() {
+        document.getElementById("uploadSection").classList.remove("hide");
+    }
+
+    function uploadInventory() {
+        const fileInput = document.getElementById("ngoFileInput");
+        const file = fileInput.files[0];
+        if (file) {
+            alert("Inventory uploaded successfully!");
+        } else {
+            alert("Please upload a CSV/Excel file.");
+        }
+    }
+
+    function deleteInventory() {
+        const confirmation = confirm("Are you sure you want to delete the entire inventory?");
+        if (confirmation) {
+            alert("Inventory deleted successfully!");
+        }
+    }
+
+    // Function to access the camera and show the video stream
+    function detectWithVision() {
+        const videoStream = document.getElementById("videoStream");
+        videoStream.classList.remove("hide"); // Show video element
+
+        // Access the user's camera
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function(stream) {
+                    videoStream.srcObject = stream; // Show the video stream in the video element
+                })
+                .catch(function(err) {
+                    alert("Error accessing the camera: " + err);
+                });
+        } else {
+            alert("Camera is not supported by this browser.");
+        }
+    }
+
+    // Mock NGO database
+    const ngoDatabase = [
+        { name: "City Food Bank" },
+        { name: "Hope House Food Bank" }
+    ];
+
+</script>
+
 </body>
 </html>
