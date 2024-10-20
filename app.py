@@ -1,59 +1,54 @@
-from flask import Flask, request, jsonify
-import mysql.connector
-from mysql.connector import Error
-from flask_cors import CORS
+from flask import Flask, Response, render_template
+import cv2
+from ultralytics import YOLO
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
 
-# Function to connect to the MySQL database
-def get_db_connection():
-    return mysql.connector.connect(
-        host='localhost',
-        database='geolocation_db',
-        user='root',
-        password='yuvrajA20)^'
-    )
+model = YOLO('yolov8n-seg.pt')  # Ensure you have the model file in the same directory
+list2 = [46, 47, 49]
 
-# Function to retrieve existing locations from the MySQL database
-def get_existing_locations():
-    existing_locations = []
-    try:
-        connection = get_db_connection()
-        if connection.is_connected():
-            cursor = connection.cursor()
-            cursor.execute("SELECT latitude, longitude FROM locations")
-            existing_locations = cursor.fetchall()  # Get all records
-    except Error as e:
-        print(f"Error: {e}")
-    finally:
-        if 'connection' in locals() and connection.is_connected():
-            cursor.close()
-            connection.close()
-    return existing_locations
+cap = cv2.VideoCapture(0)  # Change to 1 or 2 if necessary
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1920)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1080)
 
-@app.route('/location', methods=['POST'])
-def location():
-    data = request.json
-    latitude = data['latitude']
-    longitude = data['longitude']
-    
-    # Fetch existing locations from the database
-    existing_locations = get_existing_locations()
-    
-    # Check if user's coordinates match any existing coordinates
-    matches = any(
-        round(lat, 3) == round(latitude, 3) and round(long, 3) == round(longitude, 3)
-        for lat, long in existing_locations
-    )
-    
-    return jsonify({'matches': matches})
+is_running = False
 
-@app.route('/existing-coordinates', methods=['GET'])
-def existing_coordinates():
-    existing_locations = get_existing_locations()
-    # Return as a JSON array
-    return jsonify(existing_locations)
+def generate_frames():
+    global is_running
+    while is_running:
+        success, frame = cap.read()
+        if not success:
+            break
+        
+        results = model.predict(frame, classes=list2, verbose=False)
+        annotated_frame = results[0].plot()
+        
+        ret, buffer = cv2.imencode('.jpg', annotated_frame)
+        frame = buffer.tobytes()
+        
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+@app.route('/video_feed')
+def video_feed():
+    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/start')
+def start():
+    global is_running
+    if not is_running:
+        is_running = True
+    return {"status": "Detection started"}
+
+@app.route('/stop')
+def stop():
+    global is_running
+    is_running = False
+    return {"status": "Detection stopped"}
+
+@app.route('/test.html')
+def test():
+    return render_template('test.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
