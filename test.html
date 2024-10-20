@@ -3,135 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Haversine Distance Calculator</title>
+    <title>YOLOv8 Detection</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f8f8f8;
-        }
-        h1 {
-            color: #333;
-        }
-        .input-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-        }
-        input {
-            padding: 8px;
-            width: 200px;
-            margin-bottom: 10px;
+            background-color: #f4f4f4;
+            padding: 20px;
         }
         button {
-            padding: 10px 15px;
-            background-color: #007bff;
-            color: white;
-            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
             cursor: pointer;
         }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .result {
-            font-size: 1.2em;
-            margin-top: 20px;
-            color: #2c3e50;
-        }
-        #loading {
-            display: none;
-            font-size: 1.2em;
-            color: #2c3e50;
+        #video {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            border: 1px solid #ccc;
+            display: block;
+            margin: 20px auto;  /* Center the video feed */
         }
     </style>
 </head>
 <body>
-
-    <h1>Haversine Distance Calculator</h1>
-    <p>Enter the coordinates of two points to calculate the distance between them.</p>
-
-    <div class="input-group">
-        <label for="lat1">Point 1 Latitude:</label>
-        <input type="number" id="lat1" step="any" required>
-        <label for="lon1">Point 1 Longitude:</label>
-        <input type="number" id="lon1" step="any" required>
-    </div>
-
-    <div class="input-group">
-        <label for="lat2">Point 2 Latitude:</label>
-        <input type="number" id="lat2" step="any" required>
-        <label for="lon2">Point 2 Longitude:</label>
-        <input type="number" id="lon2" step="any" required>
-    </div>
-
-    <button onclick="getCurrentLocation()">Get Current Location</button>
-    <button onclick="calculateDistance()">Calculate Distance</button>
-
-    <div id="loading">Loading...</div>
-    <div class="result" id="result"></div>
+    <h1>YOLOv8 Object Detection</h1>
+    <button id="startButton">Start YOLO</button>
+    <button id="stopButton" disabled>Stop YOLO</button>
+    <img id="video" src="" alt="Video Feed" />
 
     <script>
-        function getCurrentLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    function(position) {
-                        const lat = position.coords.latitude;
-                        const lon = position.coords.longitude;
-                        document.getElementById('lat1').value = lat;
-                        document.getElementById('lon1').value = lon;
-                    },
-                    function() {
-                        document.getElementById('result').innerText = 'Unable to retrieve your location.';
-                    }
-                );
-            } else {
-                document.getElementById('result').innerText = 'Geolocation is not supported by this browser.';
-            }
-        }
+        document.getElementById('startButton').onclick = function() {
+            fetch('/start')
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    document.getElementById('video').src = '/video_feed';  // Start the video feed
+                    this.disabled = true;  // Disable the start button
+                    document.getElementById('stopButton').disabled = false;  // Enable the stop button
+                })
+                .catch(error => console.error('Error:', error));
+        };
 
-        function calculateDistance() {
-            const lat1 = parseFloat(document.getElementById('lat1').value);
-            const lon1 = parseFloat(document.getElementById('lon1').value);
-            const lat2 = parseFloat(document.getElementById('lat2').value);
-            const lon2 = parseFloat(document.getElementById('lon2').value);
-
-            // Input validation
-            if (lat1 < -90 || lat1 > 90 || lat2 < -90 || lat2 > 90 || lon1 < -180 || lon1 > 180 || lon2 < -180 || lon2 > 180) {
-                document.getElementById('result').innerText = 'Please enter valid latitude and longitude values.';
-                return;
-            }
-
-            const loading = document.getElementById('loading');
-            loading.style.display = 'block'; // Show loading spinner
-            document.getElementById('result').innerText = '';
-
-            fetch('http://127.0.0.1:5000/calculate-distance', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ lat1, lon1, lat2, lon2 }),
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                document.getElementById('result').innerText = `The distance between the two points is approximately ${data.distance.toFixed(2)} kilometers.`;
-            })
-            .catch(error => {
-                console.error('Error calculating distance:', error);
-                document.getElementById('result').innerText = 'Error calculating distance. Please try again.';
-            })
-            .finally(() => {
-                loading.style.display = 'none'; // Hide loading spinner
-            });
-        }
+        document.getElementById('stopButton').onclick = function() {
+            fetch('/stop')
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    document.getElementById('video').src = '';  // Stop the video feed
+                    this.disabled = true;  // Disable the stop button
+                    document.getElementById('startButton').disabled = false;  // Enable the start button
+                })
+                .catch(error => console.error('Error:', error));
+        };
     </script>
-
 </body>
 </html>
