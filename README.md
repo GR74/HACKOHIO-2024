@@ -97,7 +97,7 @@ def get_db_connection():
         host='localhost',
         database='geolocation_db',
         user='root',
-        password='yuvrajA20)^'
+        password='root_password'
     )
 
 # Haversine formula to calculate the distance between two coordinates
